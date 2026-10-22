@@ -1,0 +1,51 @@
+Python
+#!/usr/bin/env python3
+"""
+Division 003 — Core Compliance & Case Processing Engine
+BEAST System 3.0
+"""
+
+import json
+import hashlib
+import uuid
+from datetime import datetime, timezone
+from jsonschema import validate, ValidationError
+
+class Division003Engine:
+    def __init__(self, schema_path="schemas/case_schema.json"):
+        with open(schema_path, "r", encoding="utf-8") as f:
+            self.schema = json.load(f)
+
+    def generate_sha256(self, payload_str: str) -> str:
+        """Generates cryptographic SHA-256 hash digest for evidence payloads."""
+        return hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
+
+    def create_case(self, originating_division: str, classification: str, data_uri: str, raw_data: str) -> dict:
+        """Initializes and structures a new Division 003 case record object."""
+        case_record = {
+            "case_id": str(uuid.uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "originating_division": originating_division,
+            "status": "INITIATED",
+            "classification": classification,
+            "evidence_payload": {
+                "hash_sha256": self.generate_sha256(raw_data),
+                "data_uri": data_uri
+            }
+        }
+        
+        # Validate against master schema before returning
+        validate(instance=case_record, schema=self.schema)
+        return case_record
+
+if __name__ == "__main__":
+    print("[*] Initializing Division 003 Compliance Engine...")
+    engine = Division003Engine()
+    sample_case = engine.create_case(
+        originating_division="DIV_001",
+        classification="COMPLIANCE_VIOLATION",
+        data_uri="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+        raw_data="sample_payload_transaction_data"
+    )
+    print("[+] Successfully generated and validated case record:")
+    print(json.dumps(sample_case, indent=2))
