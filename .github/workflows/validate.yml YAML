@@ -1,0 +1,78 @@
+ML
+name: Division 003 Validation Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install jsonschema pytest
+
+    - name: Run Repository Integrity Check
+      run: python3 scripts/verify_integrity.py
+
+    - name: Run Pytest Suite
+      run: pytest tests/
+File Name: tests/test_judicial.py
+Python
+import json
+import os
+import pytest
+from jsonschema import validate, ValidationError
+
+def test_schema_file_exists():
+    assert os.path.exists("schemas/case_schema.json"), "case_schema.json is missing"
+
+def test_sample_case_validates():
+    schema_path = "schemas/case_schema.json"
+    sample_path = "cases/sample_case_001.json"
+
+    if not os.path.exists(schema_path) or not os.path.exists(sample_path):
+        pytest.skip("Schema or sample file missing for test.")
+
+    with open(schema_path, "r", encoding="utf-8") as f:
+        schema = json.load(f)
+
+    with open(sample_path, "r", encoding="utf-8") as f:
+        sample = json.load(f)
+
+    # Validates structure against schema without raising error
+    validate(instance=sample, schema=schema)
+
+def test_invalid_case_fails():
+    schema_path = "schemas/case_schema.json"
+    if not os.path.exists(schema_path):
+        pytest.skip("Schema missing.")
+
+    with open(schema_path, "r", encoding="utf-8") as f:
+        schema = json.load(f)
+
+    # Malformed data payload violating constraints
+    invalid_sample = {
+        "case_id": "not-a-valid-uuid",
+        "timestamp": "invalid-timestamp",
+        "originating_division": "INVALID_DIV",
+        "status": "UNKNOWN",
+        "classification": "BAD_CLASS",
+        "evidence_payload": {}
+    }
+
+    with pytest.raises(ValidationError):
+        validate(instance=invalid_sample, schema=schema)
