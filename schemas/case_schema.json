@@ -1,0 +1,101 @@
+JSON
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Division003CaseRecord",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique global v4 UUID identifier for the case record."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of case initiation."
+    },
+    "originating_division": {
+      "type": "string",
+      "enum": ["DIV_001", "DIV_002", "DIV_003", "DIV_004", "EXTERNAL_USER"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["INITIATED", "UNDER_REVIEW", "ARBITRATION", "ADJUDICATED", "DISMISSED", "ARCHIVED"]
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["COMPLIANCE_VIOLATION", "DISPUTE_ARBITRATION", "CONSTITUTIONAL_REVIEW", "EMERGENCY_HALT"]
+    },
+    "evidence_payload": {
+      "type": "object",
+      "properties": {
+        "hash_sha256": { 
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "data_uri": { "type": "string", "format": "uri" }
+      },
+      "required": ["hash_sha256", "data_uri"]
+    },
+    "ruling": {
+      "type": "object",
+      "properties": {
+        "verdict": { "type": "string", "enum": ["SUSTAINED", "OVERRULED", "NO_ACTION", "PENALTY_APPLIED"] },
+        "summary": { "type": "string" },
+        "precedent_citation": { "type": "string" },
+        "adjudicated_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "required": ["case_id", "timestamp", "originating_division", "status", "classification", "evidence_payload"],
+  "additionalProperties": false
+}
+File Name: scripts/verify_integrity.py
+Python
+#!/usr/bin/env python3
+"""
+Division 003 — Automated Repository & Schema Integrity Verification Script
+BEAST System 3.0
+"""
+
+import os
+import sys
+import json
+
+REQUIRED_FILES = [
+    "README.md",
+    "DIVISION_003_JUDICIAL_FOUNDATION.md",
+    "docs/rules_of_procedure.md",
+    "docs/compliance_review_standards.md",
+    "docs/records_retention_policy.md",
+    "cases/case_management_workflow.md",
+    "cases/precedents/README.md",
+    "governance/founding_rulings.md",
+    "schemas/case_schema.json"
+]
+
+def verify_structure():
+    print("[-] Verifying Division 003 repository file structure...")
+    missing = [f for f in REQUIRED_FILES if not os.path.exists(f)]
+    if missing:
+        print(f"[!] ERROR: Missing required repository files: {missing}")
+        sys.exit(1)
+    print("[+] All structural files present.")
+
+def verify_schema():
+    print("[-] Validating case_schema.json syntax...")
+    schema_path = "schemas/case_schema.json"
+    try:
+        with open(schema_path, "r", encoding="utf-8") as f:
+            json.load(f)
+        print("[+] case_schema.json is valid JSON.")
+    except Exception as e:
+        print(f"[!] ERROR: case_schema.json syntax check failed: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    print("=== BEAST System 3.0: Division 003 Validation ===")
+    verify_structure()
+    verify_schema()
+    print("[*] Division 003 integrity check completed successfully.")
+    sys.exit(0)
